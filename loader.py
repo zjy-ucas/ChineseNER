@@ -1,262 +1,209 @@
-# import codecs
-#
-#
-# def read_conll_file(path):
-#     """
-#     This function will Load sentences in Conll format.
-#     A line must contain at least a word and its tag.
-#     Sentences are separated by empty lines.
-#     """
-#     sentences = []
-#     sentence = []
-#     for line in codecs.open(path, "r", "utf8"):
-#         line = line.rstrip()
-#         if not line:
-#             if len(sentence) > 0:
-#                 if "DOCSTART" not in sentence[0][0]:
-#                     sentences.append(sentence)
-#                 sentence = []
-#         else:
-#             word = line.split(" ")
-#             if word:
-#                 assert len(word) > 1, word
-#                 sentence.append(word)
-#     if len(sentence) > 0:
-#         if "DOCSTART" not in sentence[0][0]:
-#             sentences.append(sentence)
-#     return sentences
-#
-#
-# def doc_to_sentence(doc, max_len):
-#     """
-#     This function will cut doc to sentences with ！|。|；,
-#     If sentence is longer than max_len, it will be cut with ，|、|／
-#     The function return a list of integers with length of each sentence
-#     """
-#     pattern1 = "。！|；"
-#     pattern2 = "，、／"
-#     pre_index = -1
-#     pattern_index = -1
-#     sentences = []
-#     sentence = []
-#     for i, line in enumerate(doc):
-#         sentence.append(line)
-#         if i - pre_index > max_len-1:
-#             if pattern_index > pre_index:
-#                 sentences.append(sentence[:pattern_index-pre_index])
-#                 sentence = sentence[pattern_index-pre_index:]
-#                 pre_index = pattern_index
-#             else:
-#                 pre_index = i-1
-#                 sentences.append(sentence)
-#                 sentence = []
-#         else:
-#             if line[0] in pattern2:
-#                 pattern_index = i
-#                 if line[0] in pattern1:
-#                     sentences.append(sentence)
-#                     sentence = []
-#                     pre_index = i
-#     if sentence:
-#         sentences.append(sentence)
-#     return sentences
-#
-#
-# def word_mapping(sentences, min_freq):
-#     vocab = dict()
-#     word_to_id = dict()
-#     word_id = 0
-#     for sentence in sentences:
-#         for word in sentence[0]:
-#             if word in word_to_id:
-#                 continue
-#             if word in vocab:
-#                 vocab[word] += 1
-#                 if vocab[word] >= min_freq:
-#                     word_to_id[word] = word_id
-#                     word_id += 1
-#             else:
-#                 vocab[word] = 1
-#     word_to_id["<UNK>"] = word_id
-#     word_to_id["<PAD>"] = word_id+1
-#
-#     return word_to_id, {v: k for k, v in word_to_id.items()}
-#
-#
-# def prepare_data(data, word_to_id, tag_to_id, max_words):
-#     processed_data = []
-#     for doc in data:
-#         doc = doc_to_sentence(doc, max_words)
-#         len_doc = len(doc)
-#         for i, sentence in enumerate(doc):
-#             len_sen = len(sentence)
-#             str_words = []
-#             words = []
-#             tags = []
-#             for line in sentence:
-#                 word = line[0].lower()
-#                 str_words.append(word)
-#                 words.append(word_to_id[word] if word in word_to_id
-#                              else word_to_id["<UNK>"])
-#                 tags.append(tag_to_id[line[-1]])
-#             words += [word_to_id["<PAD>"]] * (max_words-len_sen)
-#             tags += [tag_to_id["O"]] * (max_words-len_sen)
-#             processed_data.append({"str_words": str_words,
-#                                    "words": words,
-#                                    "tags": tags,
-#                                    "len": len_sen,
-#                                    "end_of_sentence": i == len_doc-1})
-#     return processed_data
-#
-#
-# def load_data(params, tag_to_id):
-#     train_file = read_conll_file(params.train_file)
-#     dev_file = read_conll_file(params.dev_file)
-#     test_file = read_conll_file(params.test_file)
-#
-#     word_to_id, id_to_word = word_mapping(train_file, params.min_freq)
-#     train_data = prepare_data(train_file, word_to_id, tag_to_id, params.word_max_len)
-#     dev_data = prepare_data(dev_file, word_to_id, tag_to_id, params.word_max_len)
-#     test_data = prepare_data(test_file, word_to_id, tag_to_id, params.word_max_len)
-#     return word_to_id, {v: k for k, v in tag_to_id.items()}, train_data, dev_data, test_data
+import os
+import re
 import codecs
-import jieba
-import numpy as np
+import pickle
 
-def read_conll_file(path):
+import jieba
+from jieba import posseg
+from data_utils import create_dico, create_mapping, zero_digits
+from data_utils import iob2, iob_iobes
+
+jieba.initialize()
+
+
+def load_sentences(path, lower, zeros):
     """
-    This function will Load sentences in Conll format.
-    A line must contain at least a word and its tag.
+    Load sentences. A line must contain at least a word and its tag.
     Sentences are separated by empty lines.
     """
     sentences = []
     sentence = []
-    for line in codecs.open(path, "r", "utf8"):
-        line = line.rstrip()
+    num = 0
+    for line in codecs.open(path, 'r', 'utf8'):
+        num+=1
+        line = zero_digits(line.rstrip()) if zeros else line.rstrip()
+        # print(list(line))
         if not line:
             if len(sentence) > 0:
-                if "DOCSTART" not in sentence[0][0]:
+                if 'DOCSTART' not in sentence[0][0]:
                     sentences.append(sentence)
                 sentence = []
         else:
-            word = line.split(" ")
-            if word:
-                assert len(word) > 1, word
-                sentence.append(word)
+            if line[0] == " ":
+                line = "$" + line[1:]
+                word = line.split()
+                # word[0] = " "
+            else:
+                word= line.split()
+            assert len(word) >= 2, print([word[0]])
+            sentence.append(word)
     if len(sentence) > 0:
-        if "DOCSTART" not in sentence[0][0]:
+        if 'DOCSTART' not in sentence[0][0]:
             sentences.append(sentence)
     return sentences
 
 
-def doc_to_sentence(doc, max_len):
+def update_tag_scheme(sentences, tag_scheme):
     """
-    This function will cut doc to sentences with ！|。|；,
-    If sentence is longer than max_len, it will be cut with ，|、|／
-    The function return a list of integers with length of each sentence
+    Check and update sentences tagging scheme to IOB2.
+    Only IOB1 and IOB2 schemes are accepted.
     """
-    pattern1 = "。！|？；"
-    pattern2 = "，、／。；"
-    pre_index = -1
-    pattern_index = -1
-    sentences = []
-    sentence = []
-    for i, line in enumerate(doc):
-        sentence.append(line)
-        if i - pre_index > max_len-1:
-            if pattern_index > pre_index:
-                sentences.append(sentence[:pattern_index-pre_index])
-                sentence = sentence[pattern_index-pre_index:]
-                pre_index = pattern_index
-            else:
-                pre_index = i-1
-                sentences.append(sentence)
-                sentence = []
+    for i, s in enumerate(sentences):
+        tags = [w[-1] for w in s]
+        # Check that tags are given in the IOB format
+        if not iob2(tags):
+            s_str = '\n'.join(' '.join(w) for w in s)
+            raise Exception('Sentences should be given in IOB format! ' +
+                            'Please check sentence %i:\n%s' % (i, s_str))
+        if tag_scheme == 'iob':
+            # If format was IOB1, we convert to IOB2
+            for word, new_tag in zip(s, tags):
+                word[-1] = new_tag
+        elif tag_scheme == 'iobes':
+            new_tags = iob_iobes(tags)
+            for word, new_tag in zip(s, new_tags):
+                word[-1] = new_tag
         else:
-            if line[0] in pattern2:
-                pattern_index = i
-                if line[0] in pattern1:
-                    sentences.append(sentence)
-                    sentence = []
-                    pre_index = i
-    if sentence:
-        sentences.append(sentence)
-    return sentences
+            raise Exception('Unknown tagging scheme!')
 
 
-def word_mapping(data, min_freq):
-    vocab = dict()
-    word_to_id = dict()
-    word_id = 0
-    for doc in data:
-        for line in doc:
-            word = line[0]
-            if word not in word_to_id:
-                if word in vocab:
-                    vocab[word] += 1
-                    if vocab[word] >= min_freq:
-                        word_to_id[word] = word_id
-                        word_id += 1
-                else:
-                    vocab[word] = 1
-    word_to_id["<UNK>"] = word_id
-    word_to_id["<PAD>"] = word_id+1
-    return word_to_id, {v: k for k, v in word_to_id.items()}
+def char_mapping(sentences, lower):
+    """
+    Create a dictionary and a mapping of words, sorted by frequency.
+    """
+    chars = [[x[0].lower() if lower else x[0] for x in s] for s in sentences]
+    dico = create_dico(chars)
+    dico['<UNK>'] = 10000000
+    char_to_id, id_to_char = create_mapping(dico)
+    print("Found %i unique words (%i in total)" % (
+        len(dico), sum(len(x) for x in chars)
+    ))
+    return dico, char_to_id, id_to_char
 
 
-def prepare_data(data, word_to_id, tag_to_id, max_words):
-    processed_data = []
-    for doc in data:
-        doc = doc_to_sentence(doc, max_words)
-        len_doc = len(doc)
-
-        for i, sentence in enumerate(doc):
-            len_sen = len(sentence)
-            str_words = []
-            words = []
-            tags = []
-            for line in sentence:
-                word = line[0].lower()
-                str_words.append(word)
-                words.append(word_to_id[word] if word in word_to_id
-                             else word_to_id["<UNK>"])
-                tags.append(tag_to_id[line[-1]])
-            words += [word_to_id["<PAD>"]] * (max_words-len_sen)
-            tags += [tag_to_id["O"]] * (max_words-len_sen)
-            features = np.zeros([max_words, 4],dtype=np.float32)
-            index = 0
-            # BIES tags
-            for word in jieba.cut("".join(str_words)):
-                len_word = len(word)
-                if len_word == 1:
-                    features[index, 0] = 1 #S
-                    index += 1
-                else:
-                    features[index, 1] = 1
-                    index += 1
-                    for i_ in range(len_word-2):
-                        features[index, 2] = 1
-                        index += 1
-                    features[index, 3] = 1
-                    index += 1
-            processed_data.append({"str_line": str_words,
-                                   "words": words,
-                                   "tags": tags,
-                                   "len": len_sen,
-                                   "features": features,
-                                   "end_of_doc": i == len_doc-1})
-    return processed_data
+def tag_mapping(sentences):
+    """
+    Create a dictionary and a mapping of tags, sorted by frequency.
+    """
+    tags = [[char[-1] for char in s] for s in sentences]
+    dico = create_dico(tags)
+    tag_to_id, id_to_tag = create_mapping(dico)
+    print("Found %i unique named entity tags" % len(dico))
+    return dico, tag_to_id, id_to_tag
 
 
-def load_data(params, tag_to_id):
-    train_file = read_conll_file(params.train_file)
-    dev_file = read_conll_file(params.dev_file)
-    test_file = read_conll_file(params.test_file)
-    word_to_id, id_to_word = word_mapping(train_file, params.min_freq)
-    train_data = prepare_data(train_file, word_to_id, tag_to_id, params.word_max_len)
-    dev_data = prepare_data(dev_file, word_to_id, tag_to_id, params.word_max_len)
-    test_data = prepare_data(test_file, word_to_id, tag_to_id, params.word_max_len)
-    print(len(train_file))
-    print(len(train_data))
-    return word_to_id, {v: k for k, v in tag_to_id.items()}, train_data, dev_data, test_data
+def pos_mapping(sentences):
+    """
+    Create a dictionary and a mapping of tags, sorted by frequency.
+    """
+    pos = [[char[1] for char in s] for s in sentences]
+    dico = create_dico(pos)
+    dico["UNK"] = 100000000
+    pos_to_id, id_to_pos = create_mapping(dico)
+    print("Found %i unique part of speech tags" % len(dico))
+    return dico, pos_to_id, id_to_pos
+
+
+def get_seg_features(string):
+    """
+    Segment text with jieba
+    features are represented in bies format
+    s donates single word
+    """
+    seg_feature = []
+
+    for word in jieba.cut(string):
+        if len(word) == 1:
+            seg_feature.append(0)
+        else:
+            tmp = [2] * len(word)
+            tmp[0] = 1
+            tmp[-1] = 3
+            seg_feature.extend(tmp)
+    return seg_feature
+
+
+def prepare_dataset(sentences, char_to_id, tag_to_id, lower=False, train=True):
+    """
+    Prepare the dataset. Return a list of lists of dictionaries containing:
+        - word indexes
+        - word char indexes
+        - tag indexes
+    """
+
+    none_index = tag_to_id["O"]
+
+    def f(x):
+        return x.lower() if lower else x
+    data = []
+    for s in sentences:
+        string = [w[0] for w in s]
+        chars = [char_to_id[f(w) if f(w) in char_to_id else '<UNK>']
+                 for w in string]
+        segs = get_seg_features("".join(string))
+        if train:
+            tags = [tag_to_id[w[-1]] for w in s]
+        else:
+            tags = [none_index for _ in chars]
+        data.append({
+            "string": string,
+            "chars": chars,
+            "segs": segs,
+            "tags": tags
+        })
+
+    return data
+
+
+def augment_with_pretrained(dictionary, ext_emb_path, chars):
+    """
+    Augment the dictionary with words that have a pretrained embedding.
+    If `words` is None, we add every word that has a pretrained embedding
+    to the dictionary, otherwise, we only add the words that are given by
+    `words` (typically the words in the development and test sets.)
+    """
+    print('Loading pretrained embeddings from %s...' % ext_emb_path)
+    assert os.path.isfile(ext_emb_path)
+
+    # Load pretrained embeddings from file
+    pretrained = set([
+        line.rstrip().split()[0].strip()
+        for line in codecs.open(ext_emb_path, 'r', 'utf-8')
+        if len(ext_emb_path) > 0
+    ])
+
+    # We either add every word in the pretrained file,
+    # or only words given in the `words` list to which
+    # we can assign a pretrained embedding
+    if chars is None:
+        for char in pretrained:
+            if char not in dictionary:
+                dictionary[char] = 0
+    else:
+        for char in chars:
+            if any(x in pretrained for x in [
+                char,
+                char.lower(),
+                re.sub('\d', '0', char.lower())
+            ]) and char not in dictionary:
+                dictionary[char] = 0
+
+    word_to_id, id_to_word = create_mapping(dictionary)
+    return dictionary, word_to_id, id_to_word
+
+
+def save_maps(save_path, *params):
+    """
+    Save mappings and invert mappings
+    """
+    with codecs.open(save_path, "w", encoding="utf8") as f:
+        pickle.dump(params, f)
+
+
+def load_maps(save_path):
+    """
+    Load mappings from the file
+    """
+    with codecs.open(save_path, "r", encoding="utf8") as f:
+        pickle.load(save_path, f)
 

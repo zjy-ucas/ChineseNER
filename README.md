@@ -6,7 +6,7 @@ This repository contains a neural network model for chainese named entity recogn
 - [Mingjie Chen](https://github.com/superthierry)
 
 ## Requirements
-- [Tensorflow](https://github.com/tensorflow/tensorflow)
+- [Tensorflow=1.2.0](https://github.com/tensorflow/tensorflow)
 - [jieba](https://github.com/fxsjy/jieba)
 
 
@@ -16,16 +16,21 @@ The model is a birectional LSTM neural network with a CRF layer. Sequence of chi
 ## Basic Usage
 
 ### Default parameters:
-- batch size: 20
+- batch size: 1
 - gradient clip: 5
-- optimizer: Adam
+- optimizer: SGD
 - dropout rate: 0.5
-- basic learning rate: 0.001
+- learning rate: 0.005
 
-We train word vectors with gensim version of word2vec on Chinese WiKi corpus and 	finetune the embedding layer
+We train word vectors with gensim version of word2vec on Chinese WiKi corpus
 #### Train the model with default parameters:
 ```shell
-$ python3 train.py
+$ python3 main.py --train=True --clean=True
 ```
 
-the best F1 score is 0.8948 when tested, a f1 score higher than 0.89 is reasonable
+#### Online evaluate:
+```shell
+$ python3 main.py
+```
+
+
