@@ -3,12 +3,9 @@ import re
 import codecs
 import pickle
 
-import jieba
-from jieba import posseg
-from data_utils import create_dico, create_mapping, zero_digits
-from data_utils import iob2, iob_iobes
 
-jieba.initialize()
+from data_utils import create_dico, create_mapping, zero_digits
+from data_utils import iob2, iob_iobes, get_seg_features
 
 
 def load_sentences(path, lower, zeros):
@@ -102,25 +99,6 @@ def pos_mapping(sentences):
     pos_to_id, id_to_pos = create_mapping(dico)
     print("Found %i unique part of speech tags" % len(dico))
     return dico, pos_to_id, id_to_pos
-
-
-def get_seg_features(string):
-    """
-    Segment text with jieba
-    features are represented in bies format
-    s donates single word
-    """
-    seg_feature = []
-
-    for word in jieba.cut(string):
-        if len(word) == 1:
-            seg_feature.append(0)
-        else:
-            tmp = [2] * len(word)
-            tmp[0] = 1
-            tmp[-1] = 3
-            seg_feature.extend(tmp)
-    return seg_feature
 
 
 def prepare_dataset(sentences, char_to_id, tag_to_id, lower=False, train=True):

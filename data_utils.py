@@ -3,6 +3,8 @@ import re
 import codecs
 
 import numpy as np
+import jieba
+jieba.initialize()
 
 
 def create_dico(item_list):
@@ -139,6 +141,25 @@ def pad_word_chars(words):
     return chars, char_lengths
 
 
+def get_seg_features(string):
+    """
+    Segment text with jieba
+    features are represented in bies format
+    s donates single word
+    """
+    seg_feature = []
+
+    for word in jieba.cut(string):
+        if len(word) == 1:
+            seg_feature.append(0)
+        else:
+            tmp = [2] * len(word)
+            tmp[0] = 1
+            tmp[-1] = 3
+            seg_feature.extend(tmp)
+    return seg_feature
+
+
 def create_input(data):
     """
     Take sentence data and return an input for
@@ -271,6 +292,6 @@ def input_from_line(line, char_to_id):
     line.replace(" ", "$")
     inputs.append([char_to_id[char] if char in char_to_id else char_to_id["<UNK>"]
                    for char in line])
-    inputs.append([])
+    inputs.append(get_seg_features(line))
     inputs.append([])
     return inputs
