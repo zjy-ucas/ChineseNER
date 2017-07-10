@@ -27,7 +27,7 @@ Our model is similar to the state-of-the-art Chinese named entity recognition mo
 - dropout rate: 0.5
 - learning rate: 0.001
 
-Word vectors are trained with gensim version of word2vec on Chinese WiKi corpus, provided by [Chuanhai Dong](https:github.com/sea2603).
+Word vectors are trained with gensim version of word2vec on Chinese WiKi corpus, provided by [Chuanhai Dong](https://github.com/sea2603).
 
 ### Train the model with default parameters:
 ```shell
