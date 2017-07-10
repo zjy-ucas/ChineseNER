@@ -4,7 +4,7 @@ This repository contains a simple demo for chainese named entity recognition.
 ## Contributer
 - [Jingyuan Zhang](https://github.com/zjy-ucas)
 - [Mingjie Chen](https://github.com/superthierry)
-- some data processing codes from[glample/tagger](https://github.com/lample/tagger)
+- some data processing codes from [glample/tagger](https://github.com/lample/tagger)
 
 
 ## Requirements
@@ -15,7 +15,7 @@ This repository contains a simple demo for chainese named entity recognition.
 ## Model
 The model is a birectional LSTM neural network with a CRF layer. Sequence of chinese characters are projected into sequence of dense vectors, and concated with extra features as the inputs of recurrent layer, here we employ one hot vectors representing word boundary features for illustration. The recurrent layer is a bidirectional LSTM layer, outputs of forward and backword vectors are concated and projected to score of each tag. A CRF layer is used to overcome label-bias problem.
 
-Our model is similiar to the state-of-the-art Chinese named entity recognition model proposed in Character-Based LSTM-CRF with Radical-Level Features for Chinese Named Entity Recognition.
+Our model is similar to the state-of-the-art Chinese named entity recognition model proposed in Character-Based LSTM-CRF with Radical-Level Features for Chinese Named Entity Recognition.
 
 ## Basic Usage
 

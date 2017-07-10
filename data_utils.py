@@ -1,6 +1,8 @@
 # encoding = utf8
 import re
+import math
 import codecs
+import random
 
 import numpy as np
 import jieba
@@ -119,26 +121,6 @@ def insert_singletons(words, singletons, p=0.5):
         else:
             new_words.append(word)
     return new_words
-
-
-def pad_word_chars(words):
-    """
-    Pad the characters of the words in a sentence.
-    Input:
-        - list of lists of ints (list of words, a word being a list of char indexes)
-    Output:
-        - padded list of lists of ints
-        - padded list of lists of ints (where chars are reversed)
-        - list of ints corresponding to the index of the last character of each word
-    """
-    max_length = max([len(word) for word in words])
-    chars = []
-    char_lengths = []
-    for word in words:
-        padding = [0] * (max_length - len(word))
-        chars.append(word + padding)
-        char_lengths.append(len(word))
-    return chars, char_lengths
 
 
 def get_seg_features(string):
@@ -288,10 +270,56 @@ def input_from_line(line, char_to_id):
     line = full_to_half(line)
     line = replace_html(line)
     inputs = list()
-    inputs.append(line)
+    inputs.append([line])
     line.replace(" ", "$")
-    inputs.append([char_to_id[char] if char in char_to_id else char_to_id["<UNK>"]
-                   for char in line])
-    inputs.append(get_seg_features(line))
-    inputs.append([])
+    inputs.append([[char_to_id[char] if char in char_to_id else char_to_id["<UNK>"]
+                   for char in line]])
+    inputs.append([get_seg_features(line)])
+    inputs.append([[]])
     return inputs
+
+
+class BatchManager(object):
+
+    def __init__(self, data,  batch_size):
+        self.batch_data = self.sort_and_pad(data, batch_size)
+        self.len_data = len(self.batch_data)
+
+    def sort_and_pad(self, data, batch_size):
+        num_batch = int(math.ceil(len(data) /batch_size))
+        sorted_data = sorted(data, key=lambda x: len(x[0]))
+        batch_data = list()
+        for i in range(num_batch):
+            batch_data.append(self.pad_data(sorted_data[i*batch_size : (i+1)*batch_size]))
+        return batch_data
+
+    @staticmethod
+    def pad_data(data):
+        strings = []
+        chars = []
+        segs = []
+        targets = []
+        max_length = max([len(sentence[0]) for sentence in data])
+        for line in data:
+            string, char, seg, target = line
+            padding = [0] * (max_length - len(string))
+            strings.append(string + padding)
+            chars.append(char + padding)
+            segs.append(seg + padding)
+            targets.append(target + padding)
+        return [strings, chars, segs, targets]
+
+    def iter_batch(self, shuffle=False):
+        if shuffle:
+            random.shuffle(self.batch_data)
+        for idx in range(self.len_data):
+            yield self.batch_data[idx]
+    """
+    Pad the characters of the words in a sentence.
+    Input:
+        - list of lists of ints (list of words, a word being a list of char indexes)
+    Output:
+        - padded list of lists of ints
+        - padded list of lists of ints (where chars are reversed)
+        - list of ints corresponding to the index of the last character of each word
+    """

@@ -1,8 +1,6 @@
 import os
 import re
 import codecs
-import pickle
-
 
 from data_utils import create_dico, create_mapping, zero_digits
 from data_utils import iob2, iob_iobes, get_seg_features
@@ -70,6 +68,7 @@ def char_mapping(sentences, lower):
     """
     chars = [[x[0].lower() if lower else x[0] for x in s] for s in sentences]
     dico = create_dico(chars)
+    dico["<PAD>"] = 10000001
     dico['<UNK>'] = 10000000
     char_to_id, id_to_char = create_mapping(dico)
     print("Found %i unique words (%i in total)" % (
@@ -87,18 +86,6 @@ def tag_mapping(sentences):
     tag_to_id, id_to_tag = create_mapping(dico)
     print("Found %i unique named entity tags" % len(dico))
     return dico, tag_to_id, id_to_tag
-
-
-def pos_mapping(sentences):
-    """
-    Create a dictionary and a mapping of tags, sorted by frequency.
-    """
-    pos = [[char[1] for char in s] for s in sentences]
-    dico = create_dico(pos)
-    dico["UNK"] = 100000000
-    pos_to_id, id_to_pos = create_mapping(dico)
-    print("Found %i unique part of speech tags" % len(dico))
-    return dico, pos_to_id, id_to_pos
 
 
 def prepare_dataset(sentences, char_to_id, tag_to_id, lower=False, train=True):
@@ -123,12 +110,7 @@ def prepare_dataset(sentences, char_to_id, tag_to_id, lower=False, train=True):
             tags = [tag_to_id[w[-1]] for w in s]
         else:
             tags = [none_index for _ in chars]
-        data.append({
-            "string": string,
-            "chars": chars,
-            "segs": segs,
-            "tags": tags
-        })
+        data.append([string, chars, segs, tags])
 
     return data
 
@@ -174,14 +156,16 @@ def save_maps(save_path, *params):
     """
     Save mappings and invert mappings
     """
-    with codecs.open(save_path, "w", encoding="utf8") as f:
-        pickle.dump(params, f)
+    pass
+    # with codecs.open(save_path, "w", encoding="utf8") as f:
+    #     pickle.dump(params, f)
 
 
 def load_maps(save_path):
     """
     Load mappings from the file
     """
-    with codecs.open(save_path, "r", encoding="utf8") as f:
-        pickle.load(save_path, f)
+    pass
+    # with codecs.open(save_path, "r", encoding="utf8") as f:
+    #     pickle.load(save_path, f)
 
