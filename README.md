@@ -29,12 +29,12 @@ Our model is similar to the state-of-the-art Chinese named entity recognition mo
 
 Word vectors are trained with gensim version of word2vec on Chinese WiKi corpus, provided by [Chuanhan Dong](https:github.com/sea2603).
 
-#### Train the model with default parameters:
+### Train the model with default parameters:
 ```shell
 $ python3 main.py --train=True --clean=True
 ```
 
-#### Online evaluate:
+### Online evaluate:
 ```shell
 $ python3 main.py
 ```
