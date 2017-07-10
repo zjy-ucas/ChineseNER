@@ -314,12 +314,3 @@ class BatchManager(object):
             random.shuffle(self.batch_data)
         for idx in range(self.len_data):
             yield self.batch_data[idx]
-    """
-    Pad the characters of the words in a sentence.
-    Input:
-        - list of lists of ints (list of words, a word being a list of char indexes)
-    Output:
-        - padded list of lists of ints
-        - padded list of lists of ints (where chars are reversed)
-        - list of ints corresponding to the index of the last character of each word
-    """
