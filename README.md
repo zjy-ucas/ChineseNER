@@ -4,7 +4,7 @@ This repository contains a simple demo for chainese named entity recognition.
 ## Contributer
 - [Jingyuan Zhang](https://github.com/zjy-ucas)
 - [Mingjie Chen](https://github.com/superthierry)
-- some data processing codes from [glample/tagger](https://github.com/lample/tagger)
+- some data processing codes from [glample/tagger](https://github.com/glample/tagger)
 
 
 ## Requirements
