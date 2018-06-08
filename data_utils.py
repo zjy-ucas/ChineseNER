@@ -290,7 +290,7 @@ class BatchManager(object):
         sorted_data = sorted(data, key=lambda x: len(x[0]))
         batch_data = list()
         for i in range(num_batch):
-            batch_data.append(self.pad_data(sorted_data[i*batch_size : (i+1)*batch_size]))
+            batch_data.append(self.pad_data(sorted_data[i*int(batch_size) : (i+1)*int(batch_size)]))
         return batch_data
 
     @staticmethod
